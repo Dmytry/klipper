@@ -1,4 +1,9 @@
+
+G28 X Y
+
 SET_KINEMATIC_POSITION X=0 Y=280 Z=0
+
+; DUMP_TMC stepper=stepper_a
 
 G1 X1 Y270 F1200
 G1 X-1 Y270
