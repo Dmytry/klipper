@@ -67,8 +67,8 @@ class PythagorasKinematics:
         ranges = [r.get_range() for r in self.rails]
         self.axes_min = toolhead.Coord(*[r[0] for r in ranges], e=0.)
         self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
-
-        self._test_calc_position()
+        # Internal test of calc position
+        # self._test_calc_position()
 
     def get_steppers(self):
         return self.steppers
@@ -82,7 +82,7 @@ class PythagorasKinematics:
     def _minimize_fun(self, x, t):
         v = self._calc_steppers_from_xy(x[0], x[1])
         #minimized value and partial derivatives
-        return (v[0]-t[0])**2 + (v[1]-t[1])**2 # , [(v[0]-t[0])*2, (v[1]-t[1])*2]
+        return (v[0]-t[0])**2 + (v[1]-t[1])**2 # Would be nice to not discard difference sign information from the function
 
     def _internal_calc_position(self, a, b):
         logging.info(f'calc_position called for {a}, {b}')
@@ -104,7 +104,7 @@ class PythagorasKinematics:
 
     def _test_calc_position(self):
         for x in range(-30, 31, 5):
-            for y in range(50, 151, 5):
+            for y in range(10, 151, 5):
                 logging.info(f'test: {x}, {y}')
                 p=self._calc_steppers_from_xy(x,y)
                 new_x, new_y = self._internal_calc_position(p[0], p[1])
@@ -153,7 +153,7 @@ class PythagorasKinematics:
                 [self.rails[0], self.rails[1]],
                 [0, 0, None, None],
                 # just plain don't understand what this is supposed to be doing. apparently homepos is not target.
-                [0, 280, None, None]
+                [self.home_x, self.home_y, None, None]
                 #[self.rails[0].position_min, self.rails[1].position_min, None, None],
                 #[hi[0].position_endstop, hi[1].position_endstop, None, None]
                 )
