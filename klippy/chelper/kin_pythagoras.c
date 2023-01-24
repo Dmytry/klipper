@@ -32,8 +32,15 @@ static double pythagoras_stepper_calc_position(struct stepper_kinematics *sk, st
     double dy = c.y - hs->y;
     double d2 = dx*dx + dy*dy;
     double free_belt_length=sqrt(d2 - square(hs->r1 + hs->r2));
+
+    // Angles are counter clockwise
+    // Left pulley has positive radius and unwinds counterclockwise. Right pulley has negative radius and unwinds clockwise.
+    // The straight belt is at an extra clockwise angle on the left pulley and rotated counter-clockwise on the right.
     double belt_angle = atan2(dy, dx) - atan2(hs->r1 + hs->r2, free_belt_length);
+
+    // Belt length is free belt length + length wrapped around the pulley
     double belt_length = free_belt_length - belt_angle * hs->r1;
+
     return belt_length;
 }
 
