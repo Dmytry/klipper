@@ -11,6 +11,7 @@ import scipy.optimize
 class PythagorasKinematics:
     def __init__(self, toolhead, config):
         # Setup axis steppers
+        self.printer = config.get_printer()
         printer_config = config.getsection('printer')
         self.home_x=printer_config.getfloat('home_x')
         self.home_y=printer_config.getfloat('home_y')
@@ -149,14 +150,24 @@ class PythagorasKinematics:
 
         homing_state.set_axes(updated_axes)
         if home_xy:
-            homing_state.home_rails(
-                [self.rails[0], self.rails[1]],
-                [0, 0, None, None],
-                # just plain don't understand what this is supposed to be doing. apparently homepos is not target.
-                [self.home_x, self.home_y, None, None]
-                #[self.rails[0].position_min, self.rails[1].position_min, None, None],
-                #[hi[0].position_endstop, hi[1].position_endstop, None, None]
-                )
+            gcode=self.printer.lookup_object('gcode')
+            toolhead = self.printer.lookup_object('toolhead')
+            print('Trying to home')
+            fmove = self.printer.lookup_object('force_move')
+            stepper_enable=self.printer.lookup_object('stepper_enable')
+            stepper_b_enable=stepper_enable.lookup_enable(self.steppers[1].get_name())
+            toolhead.dwell(0.1)
+            print_time = toolhead.get_last_move_time()
+            stepper_b_enable.motor_disable(print_time)
+            move=fmove.manual_move
+
+            stepper_a_name=self.steppers[0].get_name()
+
+            gcode.run_script_from_command(f'SET_TMC_CURRENT STEPPER={stepper_a_name} CURRENT=0.4\n')
+            move(self.steppers[0], -20, 20, 20)
+            # TODO : obtain current from configuration
+            gcode.run_script_from_command(f'SET_TMC_CURRENT STEPPER={stepper_a_name} CURRENT=0.8\n')
+
         if home_z:
             self._home_axis(homing_state, 2, self.rails[2])
     def _motor_off(self, print_time):
