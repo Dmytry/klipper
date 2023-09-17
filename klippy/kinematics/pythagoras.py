@@ -150,6 +150,10 @@ class PythagorasKinematics:
 
         homing_state.set_axes(updated_axes)
         if home_xy:
+            # TODO: read custom values from config
+            x = self.home_x
+            y = self.home_y
+
             gcode=self.printer.lookup_object('gcode')
             toolhead = self.printer.lookup_object('toolhead')
             print('Trying to home')
@@ -164,9 +168,11 @@ class PythagorasKinematics:
             stepper_a_name=self.steppers[0].get_name()
 
             gcode.run_script_from_command(f'SET_TMC_CURRENT STEPPER={stepper_a_name} CURRENT=0.4\n')
-            move(self.steppers[0], -20, 20, 20)
+            move(self.steppers[0], -399, 200, 50)
             # TODO : obtain current from configuration
             gcode.run_script_from_command(f'SET_TMC_CURRENT STEPPER={stepper_a_name} CURRENT=0.8\n')
+            curpos = toolhead.get_position()
+            toolhead.set_position([x, y, curpos[2], curpos[3]])            
 
         if home_z:
             self._home_axis(homing_state, 2, self.rails[2])
