@@ -70,6 +70,7 @@ class PythagorasKinematics:
         self.axes_max = toolhead.Coord(*[r[1] for r in ranges], e=0.)
         # Internal test of calc position
         # self._test_calc_position()
+        self.limit_z = (1.0, -1.0)
 
     def get_steppers(self):
         return self.steppers
@@ -95,7 +96,6 @@ class PythagorasKinematics:
         logging.info(f'calculated position {result.x} after {result.nit} iterations with status {result.success}')
         return [result.x[0], result.x[1]] # if result.success else [0, 280]
 
-    # TODO: implement
     def calc_position(self, stepper_positions):
         a = stepper_positions[self.rails[0].get_name()]
         b = stepper_positions[self.rails[1].get_name()]
@@ -111,11 +111,30 @@ class PythagorasKinematics:
                 new_x, new_y = self._internal_calc_position(p[0], p[1])
                 logging.info(f'test results: {x-new_x}, {y-new_y}')
 
+    def _round_to_rail(self, rail, pos):
+        stepper=rail.get_steppers()[0]
+        full_step_dist=stepper._step_dist * stepper._microsteps        
+        offset=round(stepper._mcu_position_offset/full_step_dist)*full_step_dist-stepper._mcu_position_offset
+        # Round to nearest half full step instead, maybe that results in less noise
+        offset+=0.5*full_step_dist
+        a=full_step_dist*round((pos-offset)/full_step_dist)+offset
+        print(f"Rounded rail pos in full steps: {(a+stepper._mcu_position_offset)/full_step_dist}, fsd={full_step_dist}")
+        return a
+    #remove underscore to reenable
+    def _round_to_nearest_full_step(self, position):
+        p=self._calc_steppers_from_xy(position[0], position[1])
+        a=self._round_to_rail(self.rails[0], p[0])
+        b=self._round_to_rail(self.rails[1], p[1])
+        p=self._internal_calc_position(a, b)
+        result=[p[0], p[1]]+position[2:]
+        print(f"Rounded position {position} to nearest full step at {result}, with differences {result[0]-position[0]}, {result[1]-position[1]}")
+        return result
+
     def set_position(self, newpos, homing_axes):
         for s in self.steppers:
             s.set_position(newpos)
         if 2 in homing_axes:
-            self.limit_z = self.rails[1].get_range()
+            self.limit_z = self.rails[2].get_range()
     def note_z_not_homed(self):
         # Helper for Safe Z Home
         self.limit_z = (1.0, -1.0)
@@ -201,6 +220,8 @@ class PythagorasKinematics:
             'axis_minimum': self.axes_min,
             'axis_maximum': self.axes_max,
         }
+    
+        
 
 def load_kinematics(toolhead, config):
     return PythagorasKinematics(toolhead, config)

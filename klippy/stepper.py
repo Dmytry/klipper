@@ -20,12 +20,13 @@ MIN_BOTH_EDGE_DURATION = 0.000000200
 class MCU_stepper:
     def __init__(self, name, step_pin_params, dir_pin_params,
                  rotation_dist, steps_per_rotation,
-                 step_pulse_duration=None, units_in_radians=False):
+                 step_pulse_duration=None, units_in_radians=False, microsteps=1):
         self._name = name
         self._rotation_dist = rotation_dist
         self._steps_per_rotation = steps_per_rotation
         self._step_pulse_duration = step_pulse_duration
         self._units_in_radians = units_in_radians
+        self._microsteps=microsteps
         self._step_dist = rotation_dist / steps_per_rotation
         self._mcu = step_pin_params['chip']
         self._oid = oid = self._mcu.create_oid()
@@ -239,13 +240,13 @@ def PrinterStepper(config, units_in_radians=False):
     step_pin_params = ppins.lookup_pin(step_pin, can_invert=True)
     dir_pin = config.get('dir_pin')
     dir_pin_params = ppins.lookup_pin(dir_pin, can_invert=True)
-    rotation_dist, steps_per_rotation = parse_step_distance(
+    rotation_dist, steps_per_rotation, microsteps = parse_step_distance(
         config, units_in_radians, True)
     step_pulse_duration = config.getfloat('step_pulse_duration', None,
                                           minval=0., maxval=.001)
     mcu_stepper = MCU_stepper(name, step_pin_params, dir_pin_params,
                               rotation_dist, steps_per_rotation,
-                              step_pulse_duration, units_in_radians)
+                              step_pulse_duration, units_in_radians, microsteps)
     # Register with helper modules
     for mname in ['stepper_enable', 'force_move', 'motion_report']:
         m = printer.load_object(config, mname)
@@ -276,13 +277,14 @@ def parse_step_distance(config, units_in_radians=None, note_valid=False):
                                         note_valid=note_valid)
     # Newer config format with rotation_distance
     microsteps = config.getint('microsteps', minval=1, note_valid=note_valid)
+    
     full_steps = config.getint('full_steps_per_rotation', 200, minval=1,
                                note_valid=note_valid)
     if full_steps % 4:
         raise config.error("full_steps_per_rotation invalid in section '%s'"
                            % (config.get_name(),))
     gearing = parse_gear_ratio(config, note_valid)
-    return rotation_dist, full_steps * microsteps * gearing
+    return rotation_dist, full_steps * microsteps * gearing, microsteps
 
 
 ######################################################################

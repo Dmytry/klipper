@@ -114,11 +114,21 @@ class PrinterProbe:
         return self.x_offset, self.y_offset, self.z_offset
     def _probe(self, speed):
         toolhead = self.printer.lookup_object('toolhead')
+        
+            
+
         curtime = self.printer.get_reactor().monotonic()
         if 'z' not in toolhead.get_status(curtime)['homed_axes']:
             raise self.printer.command_error("Must home before probe")
         phoming = self.printer.lookup_object('homing')
         pos = toolhead.get_position()
+
+        # kin=toolhead.get_kinematics()
+        # if kin.round_to_nearest_full_step is not None:
+        #     original_pos=pos
+        #     pos=kin.round_to_nearest_full_step(pos)
+        #     toolhead.manual_move(pos, speed)
+
         pos[2] = self.z_position
         try:
             epos = phoming.probing_move(self.mcu_probe, pos, speed)
@@ -129,6 +139,10 @@ class PrinterProbe:
             raise self.printer.command_error(reason)
         self.gcode.respond_info("probe at %.3f,%.3f is z=%.6f"
                                 % (epos[0], epos[1], epos[2]))
+        # Fix up so the bed mesh actually works (it doesn't like points getting moved a little)
+        # if kin.round_to_nearest_full_step is not None:
+        #     epos[0] = original_pos[0]
+        #     epos[1] = original_pos[1]
         return epos[:3]
     def _move(self, coord, speed):
         self.printer.lookup_object('toolhead').manual_move(coord, speed)
